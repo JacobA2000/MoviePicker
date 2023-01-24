@@ -1,4 +1,5 @@
 {
     "manager_role": "Movie Manager",
-    "suggestions_open": true
+    "suggestions_open": true,
+    "active_pool_max_items": 20
 }

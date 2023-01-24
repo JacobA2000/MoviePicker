@@ -2,7 +2,8 @@ import discord
 import requests
 import dotenv
 import os
-from discord.ui import Select, View, Button, Select
+from discord.ui import Select, View
+import random
 
 # LOAD TOKEN
 dotenv.load_dotenv()
@@ -10,6 +11,8 @@ DISCORD_TOKEN = str(os.getenv("DISCORD_TOKEN"))
 TMDB_TOKEN_V3 = str(os.getenv("TMDB_TOKEN_V3"))
 
 bot = discord.Bot()
+
+#ONREADY EVENT TO LOAD CONFIG FILE VALUES AND POPULATE POOL
 
 @bot.slash_command(name='suggest', description='Suggest a movie.')
 async def movie_suggest(ctx, *, movie:str):
@@ -22,10 +25,11 @@ async def movie_suggest(ctx, *, movie:str):
     options = []
     view = View()
     for result in top_results:
-        movie_title = result['title']
+        movie_title_and_year = f"{result['title']} ({result['release_date'][:4]})"
         movie_tmdb_id = result['id']
+        movie_desc = f"{result['overview'][:97]}..."
 
-        options.append(discord.SelectOption(label=movie_title, value=str(movie_tmdb_id)))
+        options.append(discord.SelectOption(label=movie_title_and_year, value=str(movie_tmdb_id), description=movie_desc))
     
     select.options = options
 
@@ -33,9 +37,10 @@ async def movie_suggest(ctx, *, movie:str):
         select.disabled = True
         selected_movie_id = select.values[0]
 
-        print(selected_movie_id)
-
-        #WRITE SELECTION TO FILE/DB
+        #CHECK IF THE POOL IS FULL
+        #CHECK IF USER HAS ALREADY MADE A SUGGESTION THATS IN THE POOL
+        #CHECK IF MOVIE IN SUGGESTION POOL ALREADY
+        #IF NOT ADD IT LOCALLY AND IN FILES
 
         await interaction.response.edit_message(view=view)
         await interaction.followup.send(f"Awesome! I like {select.values[0]} too!")
@@ -46,6 +51,14 @@ async def movie_suggest(ctx, *, movie:str):
 
     await ctx.send("hi", view=view)
 
-    
+@bot.slash_command(name='draw', description='Randomly selects a movie from the pool, creates an event and messages the movie channel.')
+async def draw(ctx):
+    member = ctx.guild.get_member(ctx.author.id)
+
+    if manager_role in [role.name for role in member.roles]:
+        random_movie_from_pool = movie_pool[random.randint(0, len(movie_pool)-1)]
+        await ctx.respond(f"Movie Drawn - ({random_movie_from_pool})")
+    else:
+        await ctx.respond("You do not have permission to run this command.")
     
 bot.run(DISCORD_TOKEN)

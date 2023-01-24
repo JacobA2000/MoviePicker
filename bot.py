@@ -4,15 +4,39 @@ import dotenv
 import os
 from discord.ui import Select, View
 import random
+import json
 
 # LOAD TOKEN
 dotenv.load_dotenv()
 DISCORD_TOKEN = str(os.getenv("DISCORD_TOKEN"))
 TMDB_TOKEN_V3 = str(os.getenv("TMDB_TOKEN_V3"))
 
+#GLOBAL CONFIG VARS
+manager_role = ""
+suggestions_open = True
+
+active_pool = []
+seen_pool = []
+
+#LOAD CONFIG DATA FROM config.json
+with open("./config.json", "r") as config_file:
+    config_data = json.load(config_file)
+
+manager_role = config_data["manager_role"]
+suggestions_open = config_data["suggestions_open"]
+    
+#LOAD POOL DATA FROM movie_pool.json
+with open("./movie_pool.json", "r") as pool_file:
+    pool_data = json.load(pool_file)
+
+active_pool = pool_data["active_pool"]
+seen_pool = pool_data["seen_pool"]
+
 bot = discord.Bot()
 
-#ONREADY EVENT TO LOAD CONFIG FILE VALUES AND POPULATE POOL
+@bot.event
+async def on_ready():
+    print(f"Bot is online as user {bot.user}")
 
 @bot.slash_command(name='suggest', description='Suggest a movie.')
 async def movie_suggest(ctx, *, movie:str):
@@ -56,7 +80,7 @@ async def draw(ctx):
     member = ctx.guild.get_member(ctx.author.id)
 
     if manager_role in [role.name for role in member.roles]:
-        random_movie_from_pool = movie_pool[random.randint(0, len(movie_pool)-1)]
+        random_movie_from_pool = active_pool[random.randint(0, len(active_pool)-1)]
         await ctx.respond(f"Movie Drawn - ({random_movie_from_pool})")
     else:
         await ctx.respond("You do not have permission to run this command.")

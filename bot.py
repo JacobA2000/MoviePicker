@@ -65,7 +65,7 @@ async def movie_suggest(ctx, *, movie:str):
         select.disabled = True
         selected_movie_id = select.values[0]
 
-        url = f"https://api.themoviedb.org/3/movie/{selected_movie_id}?api_key={TMDB_TOKEN_V3}&query={movie}"
+        url = f"https://api.themoviedb.org/3/movie/{selected_movie_id}?api_key={TMDB_TOKEN_V3}"
         movie_data = requests.get(url).json()
 
         movie_poster_url = f"https://image.tmdb.org/t/p/w500{movie_data['poster_path']}"
@@ -80,10 +80,13 @@ async def movie_suggest(ctx, *, movie:str):
             await interaction.followup.send(f"The pool is at capacity, wait for some space to open up.")
             return
 
-        if selected_movie_id in active_pool:
-            await interaction.response.edit_message(view=view)
-            await interaction.followup.send(f"Someone else beat ya to it. That movie is already in the pool.")
-            return
+        for movie in active_pool:
+            if selected_movie_id == movie['id']:
+                await interaction.response.edit_message(view=view)
+                await interaction.followup.send(f"Someone else beat ya to it. That movie is already in the pool.")
+                return
+
+        for movie in seen_pool
 
         #CHECK IF USER HAS REACHED THEIR SUGGESTION CAP
 
@@ -217,6 +220,5 @@ async def close_suggestions(ctx):
         await ctx.respond("Suggestions have closed! Good luck in the draw.")
     else:
         await ctx.respond("You do not have permission to run this command.")
-
 
 bot.run(DISCORD_TOKEN)

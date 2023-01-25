@@ -84,10 +84,22 @@ async def movie_suggest(ctx, *, movie:str):
 
         #CHECK IF USER HAS REACHED THEIR SUGGESTION CAP
 
+        selected_movie_json = {
+            "id": selected_movie_id,
+            "title": movie_data['title'],
+            "release_date": movie_data['release_date'],
+            "original_title": movie_data['original_title'],
+            "original_lang": movie_data['original_language'],
+            "rating": int(float(movie_data['vote_average'])*10),
+            "poster_url": movie_poster_url,
+            "suggested_by": ctx.author.id
+        }
+
         with open("./movie_pool.json", "r") as pool_file:
             pool_data = json.load(pool_file)
         
-        pool_data["active_pool"].append(selected_movie_id)
+        pool_data["active_pool"].append(selected_movie_json)
+        active_pool.append(selected_movie_json)
 
         with open("./movie_pool.json", "w") as pool_file:
             json.dump(pool_data, pool_file, indent=4, separators=(',',': '))
@@ -121,5 +133,20 @@ async def draw(ctx):
         await ctx.respond(f"Movie Drawn - ({random_movie_from_pool})")
     else:
         await ctx.respond("You do not have permission to run this command.")
-    
+
+@bot.slash_command(name="pool", description="Displays all the movies currently in the pool.")
+async def pool(ctx):
+
+    pool_embed = discord.Embed(
+        title=f"Current Movie Pool ({len(active_pool)}/{active_pool_max_items})",
+        description=f"The following movies are currently in the pool to be drawn.",
+    )
+
+    embed_field_msg = ""
+    for movie in active_pool:
+        embed_field_msg += f"{movie['title']} ({movie['release_date'][:4]})\n"
+
+    pool_embed.add_field(name="Movies:", value=embed_field_msg)
+    await ctx.respond(embed=pool_embed)
+
 bot.run(DISCORD_TOKEN)

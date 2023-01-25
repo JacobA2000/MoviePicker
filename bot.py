@@ -11,6 +11,9 @@ dotenv.load_dotenv()
 DISCORD_TOKEN = str(os.getenv("DISCORD_TOKEN"))
 TMDB_TOKEN_V3 = str(os.getenv("TMDB_TOKEN_V3"))
 
+MOVIE_POOL_FILE_PATH = './movie_pool.json'
+CONFIG_FILE_PATH = './config.json'
+
 #GLOBAL CONFIG VARS
 manager_role = ""
 suggestions_open = True
@@ -19,7 +22,7 @@ active_pool = []
 seen_pool = []
 
 #LOAD CONFIG DATA FROM config.json
-with open("./config.json", "r") as config_file:
+with open(CONFIG_FILE_PATH, "r") as config_file:
     config_data = json.load(config_file)
 
 manager_role = config_data["manager_role"]
@@ -27,7 +30,7 @@ suggestions_open = config_data["suggestions_open"]
 active_pool_max_items = config_data["active_pool_max_items"]
     
 #LOAD POOL DATA FROM movie_pool.json
-with open("./movie_pool.json", "r") as pool_file:
+with open(MOVIE_POOL_FILE_PATH, "r") as pool_file:
     pool_data = json.load(pool_file)
 
 active_pool = pool_data["active_pool"]
@@ -69,7 +72,7 @@ async def movie_suggest(ctx, *, movie:str):
 
         if suggestions_open == False:
             await interaction.response.edit_message(view=view)
-            await interaction.followup.send(f"Pool's Closed.")
+            await interaction.followup.send(f"Suggestions are currently closed try again once they reopen.")
             return
 
         if len(active_pool) >= active_pool_max_items:
@@ -95,13 +98,13 @@ async def movie_suggest(ctx, *, movie:str):
             "suggested_by": ctx.author.id
         }
 
-        with open("./movie_pool.json", "r") as pool_file:
+        with open(MOVIE_POOL_FILE_PATH, "r") as pool_file:
             pool_data = json.load(pool_file)
         
         pool_data["active_pool"].append(selected_movie_json)
         active_pool.append(selected_movie_json)
 
-        with open("./movie_pool.json", "w") as pool_file:
+        with open(MOVIE_POOL_FILE_PATH, "w") as pool_file:
             json.dump(pool_data, pool_file, indent=4, separators=(',',': '))
 
         response_embed = discord.Embed(
@@ -124,16 +127,6 @@ async def movie_suggest(ctx, *, movie:str):
 
     await ctx.respond("Search complete please select the correct movie below. (if it isn't on there ensure the title is correct)", view=view)
 
-@bot.slash_command(name='draw', description='Randomly selects a movie from the pool, creates an event and messages the movie channel.')
-async def draw(ctx):
-    member = ctx.guild.get_member(ctx.author.id)
-
-    if manager_role in [role.name for role in member.roles]:
-        random_movie_from_pool = active_pool[random.randint(0, len(active_pool)-1)]
-        await ctx.respond(f"Movie Drawn - ({random_movie_from_pool})")
-    else:
-        await ctx.respond("You do not have permission to run this command.")
-
 @bot.slash_command(name="pool", description="Displays all the movies currently in the pool.")
 async def pool(ctx):
 
@@ -148,5 +141,82 @@ async def pool(ctx):
 
     pool_embed.add_field(name="Movies:", value=embed_field_msg)
     await ctx.respond(embed=pool_embed)
+
+"""
+        MANAGER COMMANDS FROM HERE ONWARDS
+"""
+
+@bot.slash_command(name='draw', description='Randomly selects a movie from the pool, creates an event and messages the movie channel.')
+async def draw(ctx):
+    member = ctx.guild.get_member(ctx.author.id)
+
+    if manager_role in [role.name for role in member.roles]:
+        random_movie_index = random.randint(0, len(active_pool)-1)
+        random_movie_from_pool = active_pool[random_movie_index]
+
+        with open(MOVIE_POOL_FILE_PATH, "r") as pool_file:
+            pool_data = json.load(pool_file)
+        
+        pool_data["seen_pool"].append(random_movie_from_pool)
+        seen_pool.append(random_movie_from_pool)
+
+        pool_data["active_pool"].pop(random_movie_index)
+        active_pool.pop(random_movie_index)
+
+        with open(MOVIE_POOL_FILE_PATH, "w") as pool_file:
+            json.dump(pool_data, pool_file, indent=4, separators=(',',': '))
+        
+        await ctx.respond(f"Movie Drawn - ({random_movie_from_pool})")
+    else:
+        await ctx.respond("You do not have permission to run this command.")
+
+@bot.slash_command(name="open_suggestions", description="Opens the pool for suggestions.")
+async def open_suggestions(ctx):
+    global suggestions_open
+    member = ctx.guild.get_member(ctx.author.id)
+
+    if suggestions_open == True:
+        await ctx.respond("Suggestions are already open.")
+        return
+
+    if manager_role in [role.name for role in member.roles]:
+        
+        with open(CONFIG_FILE_PATH, "r") as config_file:
+            config_data = json.load(config_file)
+
+        config_data["suggestions_open"] = True
+        suggestions_open = True
+
+        with open(CONFIG_FILE_PATH, "w") as config_file:
+            json.dump(config_data, config_file, indent=4, separators=(',',': '))
+
+        await ctx.respond(f"Suggestions have opened! There are currently {active_pool_max_items -len(active_pool)} free slots in the pool.")
+    else:
+        await ctx.respond("You do not have permission to run this command.")
+
+@bot.slash_command(name="close_suggestions", description="Closes the pool for suggestions.")
+async def close_suggestions(ctx):
+    global suggestions_open
+    member = ctx.guild.get_member(ctx.author.id)
+
+    if suggestions_open == False:
+        await ctx.respond("Suggestions are already closed.")
+        return
+
+    if manager_role in [role.name for role in member.roles]:
+        
+        with open(CONFIG_FILE_PATH, "r") as config_file:
+            config_data = json.load(config_file)
+
+        config_data["suggestions_open"] = False
+        suggestions_open = False
+
+        with open(CONFIG_FILE_PATH, "w") as config_file:
+            json.dump(config_data, config_file, indent=4, separators=(',',': '))
+
+        await ctx.respond("Suggestions have closed! Good luck in the draw.")
+    else:
+        await ctx.respond("You do not have permission to run this command.")
+
 
 bot.run(DISCORD_TOKEN)

@@ -99,18 +99,17 @@
             "rating": 72,
             "poster_url": "https://image.tmdb.org/t/p/w500/vrC1lkTktFQ4AqBfqf4PXoDDLcw.jpg",
             "suggested_by": 321729937495293955
+        },
+        {
+            "id": "1865",
+            "title": "Pirates of the Caribbean: On Stranger Tides",
+            "release_date": "2011-05-14",
+            "original_title": "Pirates of the Caribbean: On Stranger Tides",
+            "original_lang": "en",
+            "rating": 65,
+            "poster_url": "https://image.tmdb.org/t/p/w500/keGfSvCmYj7CvdRx36OdVrAEibE.jpg",
+            "suggested_by": 186889883745386496
         }
     ],
-    "seen_pool": [
-        {
-            "id": "152601",
-            "title": "Her",
-            "release_date": "2013-12-18",
-            "original_title": "Her",
-            "original_lang": "en",
-            "rating": 78,
-            "poster_url": "https://image.tmdb.org/t/p/w500/yk4J4aewWYNiBhD49WD7UaBBn37.jpg",
-            "suggested_by": 232154663565262849
-        }
-    ]
+    "seen_pool": []
 }

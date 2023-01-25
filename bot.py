@@ -5,6 +5,7 @@ import os
 from discord.ui import Select, View
 import random
 import json
+from urllib.parse import quote
 
 # LOAD TOKEN
 dotenv.load_dotenv()
@@ -46,9 +47,15 @@ async def on_ready():
 
 @bot.slash_command(name='suggest', description='Suggest a movie.')
 async def movie_suggest(ctx, *, movie:str):
-    url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_TOKEN_V3}&query={movie}"
+    url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_TOKEN_V3}&query={quote(movie)}"
+    
     results = requests.get(url).json()
-    top_results = results['results'][:4]
+
+    if len(results['results']) == 0:
+        await ctx.respond("Couldn't find any movies with that name, please ensure you are spelling it correctly.", ephemeral=True)
+        return
+        
+    top_results = results['results'][:10]
 
     select = Select(placeholder="Choose the correct movie.", min_values=1, max_values=1)
     

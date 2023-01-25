@@ -16,6 +16,7 @@ CONFIG_FILE_PATH = './config.json'
 
 #GLOBAL CONFIG VARS
 manager_role = ""
+movie_role = ""
 suggestions_open = True
 
 active_pool = []
@@ -26,6 +27,7 @@ with open(CONFIG_FILE_PATH, "r") as config_file:
     config_data = json.load(config_file)
 
 manager_role = config_data["manager_role"]
+movie_role = config_data["movie_role"]
 suggestions_open = config_data["suggestions_open"]
 active_pool_max_items = config_data["active_pool_max_items"]
     
@@ -72,23 +74,30 @@ async def movie_suggest(ctx, *, movie:str):
 
         if suggestions_open == False:
             await interaction.response.edit_message(view=view)
-            await interaction.followup.send(f"Suggestions are currently closed try again once they reopen.")
+            await interaction.followup.send(f"Suggestions are currently closed try again once they reopen.", ephemeral=True)
             return
 
         if len(active_pool) >= active_pool_max_items:
             await interaction.response.edit_message(view=view)
-            await interaction.followup.send(f"The pool is at capacity, wait for some space to open up.")
+            await interaction.followup.send(f"The pool is at capacity, wait for some space to open up.", ephemeral=True)
             return
 
         for movie in active_pool:
             if selected_movie_id == movie['id']:
                 await interaction.response.edit_message(view=view)
-                await interaction.followup.send(f"Someone else beat ya to it. That movie is already in the pool.")
+                await interaction.followup.send(f"Someone else beat ya to it. That movie is already in the pool.", ephemeral=True)
                 return
 
-        for movie in seen_pool
-
         #CHECK IF USER HAS REACHED THEIR SUGGESTION CAP
+        user_active_suggested_movie_count = 0
+        for movie in active_pool:
+            if ctx.author.id == movie["suggested_by"]:
+                user_active_suggested_movie_count += 1
+        
+        if user_active_suggested_movie_count >= 3:
+            await interaction.response.edit_message(view=view)
+            await interaction.followup.send(f"Sorry you have already reached you maximum suggestion count. You will be able to suggest again when you have less than 3 active suggestions.", ephemeral=True)
+            return
 
         selected_movie_json = {
             "id": selected_movie_id,
@@ -111,7 +120,7 @@ async def movie_suggest(ctx, *, movie:str):
             json.dump(pool_data, pool_file, indent=4, separators=(',',': '))
 
         response_embed = discord.Embed(
-            title=f"Movie added to the pool.",
+            title=f"{ctx.author.name} has added a movie added to the pool.",
             description=f"Congrats! {movie_data['title']} has been added to the pool. Good luck in the draw.",
             url=movie_data["homepage"]
         )
@@ -128,7 +137,7 @@ async def movie_suggest(ctx, *, movie:str):
 
     view.add_item(select)
 
-    await ctx.respond("Search complete please select the correct movie below. (if it isn't on there ensure the title is correct)", view=view)
+    await ctx.respond("Search complete please select the correct movie below. (if it isn't on there ensure the title is correct)", view=view, ephemeral=True)
 
 @bot.slash_command(name="pool", description="Displays all the movies currently in the pool.")
 async def pool(ctx):
@@ -169,7 +178,17 @@ async def draw(ctx):
         with open(MOVIE_POOL_FILE_PATH, "w") as pool_file:
             json.dump(pool_data, pool_file, indent=4, separators=(',',': '))
         
-        await ctx.respond(f"Movie Drawn - ({random_movie_from_pool})")
+        draw_embed = discord.Embed(
+            title=f"{random_movie_from_pool['title']} has been selected.",
+            description=f"Congrats! <@{random_movie_from_pool['suggested_by']}> your movie has been selected.",
+        )
+
+        draw_embed.add_field(name="Rating", inline=True, value=f"{random_movie_from_pool['rating']}%")
+        draw_embed.add_field(name="Original Title", inline=True, value=random_movie_from_pool['original_title'])
+        draw_embed.add_field(name="Original Language", inline=True, value=random_movie_from_pool['original_lang'])
+        draw_embed.set_image(url=random_movie_from_pool["poster_url"])
+
+        await ctx.respond(embed=draw_embed)
     else:
         await ctx.respond("You do not have permission to run this command.")
 
@@ -179,7 +198,7 @@ async def open_suggestions(ctx):
     member = ctx.guild.get_member(ctx.author.id)
 
     if suggestions_open == True:
-        await ctx.respond("Suggestions are already open.")
+        await ctx.respond("Suggestions are already open.", ephemeral=True)
         return
 
     if manager_role in [role.name for role in member.roles]:
@@ -195,7 +214,7 @@ async def open_suggestions(ctx):
 
         await ctx.respond(f"Suggestions have opened! There are currently {active_pool_max_items -len(active_pool)} free slots in the pool.")
     else:
-        await ctx.respond("You do not have permission to run this command.")
+        await ctx.respond("You do not have permission to run this command.", ephemeral=True)
 
 @bot.slash_command(name="close_suggestions", description="Closes the pool for suggestions.")
 async def close_suggestions(ctx):
@@ -203,7 +222,7 @@ async def close_suggestions(ctx):
     member = ctx.guild.get_member(ctx.author.id)
 
     if suggestions_open == False:
-        await ctx.respond("Suggestions are already closed.")
+        await ctx.respond("Suggestions are already closed.", ephemeral=True)
         return
 
     if manager_role in [role.name for role in member.roles]:
@@ -217,8 +236,8 @@ async def close_suggestions(ctx):
         with open(CONFIG_FILE_PATH, "w") as config_file:
             json.dump(config_data, config_file, indent=4, separators=(',',': '))
 
-        await ctx.respond("Suggestions have closed! Good luck in the draw.")
+        await ctx.respond(f"Suggestions have closed! Good luck in the draw.")
     else:
-        await ctx.respond("You do not have permission to run this command.")
+        await ctx.respond("You do not have permission to run this command.", ephemeral=True)
 
 bot.run(DISCORD_TOKEN)

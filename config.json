@@ -1,5 +1,6 @@
 {
     "manager_role": "Movie Manager",
+    "movie_role": "morb",
     "suggestions_open": true,
     "active_pool_max_items": 20
 }

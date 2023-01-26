@@ -146,6 +146,48 @@ async def movie_suggest(ctx, *, movie:str):
 
     await ctx.respond("Search complete please select the correct movie below. (if it isn't on there ensure the title is correct)", view=view, ephemeral=True)
 
+@bot.slash_command(name="remove_suggestion", description="Allows you to remove your own suggestions.")
+async def remove_suggestion(ctx):
+    user_id = ctx.author.id
+    select = Select(placeholder="Choose the correct movie.", min_values=1, max_values=1)
+
+    view = View()
+    options = []
+    for movie in active_pool:
+        if movie['suggested_by'] == user_id:
+            options.append(discord.SelectOption(label=movie['title'], value=movie['id']))
+    
+    select.options = options
+
+    async def remove_select_callback(interaction):
+        select.disabled = True
+        selected_movie_id = select.values[0]
+        movie_title = ""
+        
+        i = 0
+        for movie in active_pool:
+            i += 1
+            if movie['id'] == selected_movie_id:
+                movie_title = movie['title']
+                break
+        
+        with open(MOVIE_POOL_FILE_PATH, "r") as pool_file:
+            pool_data = json.load(pool_file)
+        
+        pool_data['active_pool'].pop(i-1)
+        active_pool.pop(i-1)
+
+        with open(MOVIE_POOL_FILE_PATH, "w") as pool_file:
+            json.dump(pool_data, pool_file, indent=4, separators=(',',': '))
+
+        await interaction.response.edit_message(view=view)
+        await interaction.followup.send(f"{ctx.author.name} removed \"{movie_title}\" from the pool.")
+    
+    select.callback = remove_select_callback
+    view.add_item(select)
+
+    await ctx.respond("Select the correct movie to remove from the pool.", view=view, ephemeral=True)
+
 @bot.slash_command(name="pool", description="Displays all the movies currently in the pool.")
 async def pool(ctx):
 

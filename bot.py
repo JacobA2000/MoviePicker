@@ -12,8 +12,8 @@ dotenv.load_dotenv()
 DISCORD_TOKEN = str(os.getenv("DISCORD_TOKEN"))
 TMDB_TOKEN_V3 = str(os.getenv("TMDB_TOKEN_V3"))
 
-MOVIE_POOL_FILE_PATH = './movie_pool.json'
-CONFIG_FILE_PATH = './config.json'
+MOVIE_POOL_FILE_PATH = '/home/pi/MoviePicker/movie_pool.json'
+CONFIG_FILE_PATH = '/home/pi/MoviePicker/config.json'
 
 #GLOBAL CONFIG VARS
 manager_role = ""
@@ -127,7 +127,7 @@ async def movie_suggest(ctx, *, movie:str):
             json.dump(pool_data, pool_file, indent=4, separators=(',',': '))
 
         response_embed = discord.Embed(
-            title=f"{ctx.author.name} has added a movie added to the pool.",
+            title=f"{ctx.author.name} has added a movie to the pool.",
             description=f"Congrats! {movie_data['title']} has been added to the pool. Good luck in the draw.",
             url=movie_data["homepage"]
         )

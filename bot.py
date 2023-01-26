@@ -146,6 +146,74 @@ async def movie_suggest(ctx, *, movie:str):
 
     await ctx.respond("Search complete please select the correct movie below. (if it isn't on there ensure the title is correct)", view=view, ephemeral=True)
 
+@bot.slash_command(name="suggest_by_id", description="Alternative suggest command to be used when a movie cannot be found by the search used in /suggest.")
+async def movie_suggest_id(ctx, *, id:int):
+    id = str(id)
+    url = f"https://api.themoviedb.org/3/movie/{id}?api_key={TMDB_TOKEN_V3}"
+
+    movie_by_id = requests.get(url).json()
+
+    if 'success' in movie_by_id:
+        if movie_by_id['success'] == False:
+            await ctx.respond(movie_by_id['status_message'])
+    
+    if suggestions_open == False:
+        await ctx.respond(f"Suggestions are currently closed try again once they reopen.", ephemeral=True)
+        return
+
+    if len(active_pool) >= active_pool_max_items:
+        await ctx.respond(f"The pool is at capacity, wait for some space to open up.", ephemeral=True)
+        return
+
+    for movie in active_pool:
+        if id == movie['id']:
+            await ctx.respond(f"Someone else beat ya to it. That movie is already in the pool.", ephemeral=True)
+            return
+
+    #CHECK IF USER HAS REACHED THEIR SUGGESTION CAP
+    user_active_suggested_movie_count = 0
+    for movie in active_pool:
+        if ctx.author.id == movie["suggested_by"]:
+            user_active_suggested_movie_count += 1
+        
+    if user_active_suggested_movie_count >= 3:
+        await ctx.respond(f"Sorry you have already reached you maximum suggestion count. You will be able to suggest again when you have less than 3 active suggestions.", ephemeral=True)
+        return
+    
+    movie_poster_url = f"https://image.tmdb.org/t/p/w500{movie_by_id['poster_path']}"
+    movie_json = {
+        "id": id,
+        "title": movie_by_id['title'],
+        "release_date": movie_by_id['release_date'],
+        "original_title": movie_by_id['original_title'],
+        "original_lang": movie_by_id['original_language'],
+        "rating": int(float(movie_by_id['vote_average'])*10),
+        "poster_url": movie_poster_url,
+        "suggested_by": ctx.author.id
+    }
+
+    with open(MOVIE_POOL_FILE_PATH, "r") as pool_file:
+        pool_data = json.load(pool_file)
+        
+    pool_data["active_pool"].append(movie_json)
+    active_pool.append(movie_json)
+
+    with open(MOVIE_POOL_FILE_PATH, "w") as pool_file:
+        json.dump(pool_data, pool_file, indent=4, separators=(',',': '))
+
+    response_embed = discord.Embed(
+        title=f"{ctx.author.name} has added a movie to the pool.",
+        description=f"Congrats! {movie_by_id['title']} has been added to the pool. Good luck in the draw.",
+        url=movie_by_id["homepage"]
+    )
+
+    response_embed.add_field(name="Rating", inline=True, value=f"{int(float(movie_by_id['vote_average'])*10)}%")
+    response_embed.add_field(name="Original Title", inline=True, value=movie_by_id['original_title'])
+    response_embed.add_field(name="Original Language", inline=True, value=movie_by_id['original_language'])
+    response_embed.set_thumbnail(url=movie_poster_url)
+
+    await ctx.respond(embed=response_embed)
+
 @bot.slash_command(name="remove_suggestion", description="Allows you to remove your own suggestions.")
 async def remove_suggestion(ctx):
     user_id = ctx.author.id
@@ -286,6 +354,26 @@ async def close_suggestions(ctx):
             json.dump(config_data, config_file, indent=4, separators=(',',': '))
 
         await ctx.respond(f"Suggestions have closed! Good luck in the draw.")
+    else:
+        await ctx.respond("You do not have permission to run this command.", ephemeral=True)
+
+@bot.slash_command(name="set_pool_size", description="Sets the size of the maximum number of movies in the pool.")
+async def set_pool_size(ctx, *, max_items:int):
+    global active_pool_max_items
+    member = ctx.guild.get_member(ctx.author.id)
+
+    if manager_role in [role.id for role in member.roles]:
+        
+        with open(CONFIG_FILE_PATH, "r") as config_file:
+            config_data = json.load(config_file)
+
+        config_data["active_pool_max_items"] = max_items
+        active_pool_max_items = max_items
+
+        with open(CONFIG_FILE_PATH, "w") as config_file:
+            json.dump(config_data, config_file, indent=4, separators=(',',': '))
+
+        await ctx.respond(f"Max pool size updated to {active_pool_max_items}")
     else:
         await ctx.respond("You do not have permission to run this command.", ephemeral=True)
 

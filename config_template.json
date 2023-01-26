@@ -1,6 +1,6 @@
 {
-    "manager_role": "Movie Manager",
-    "movie_role": "morb",
+    "manager_role": "",
+    "movie_role": "",
     "suggestions_open": true,
     "active_pool_max_items": 20
 }

@@ -211,7 +211,7 @@ async def pool(ctx):
 async def draw(ctx):
     member = ctx.guild.get_member(ctx.author.id)
 
-    if manager_role in [role.name for role in member.roles]:
+    if manager_role in [role.id for role in member.roles]:
         random_movie_index = random.randint(0, len(active_pool)-1)
         random_movie_from_pool = active_pool[random_movie_index]
 
@@ -250,7 +250,7 @@ async def open_suggestions(ctx):
         await ctx.respond("Suggestions are already open.", ephemeral=True)
         return
 
-    if manager_role in [role.name for role in member.roles]:
+    if manager_role in [role.id for role in member.roles]:
         
         with open(CONFIG_FILE_PATH, "r") as config_file:
             config_data = json.load(config_file)
@@ -274,7 +274,7 @@ async def close_suggestions(ctx):
         await ctx.respond("Suggestions are already closed.", ephemeral=True)
         return
 
-    if manager_role in [role.name for role in member.roles]:
+    if manager_role in [role.id for role in member.roles]:
         
         with open(CONFIG_FILE_PATH, "r") as config_file:
             config_data = json.load(config_file)

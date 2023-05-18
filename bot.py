@@ -19,6 +19,7 @@ CONFIG_FILE_PATH = '/home/pi/MoviePicker/config.json'
 manager_role = ""
 movie_role = ""
 suggestions_open = True
+max_suggestions = 1
 
 active_pool = []
 seen_pool = []
@@ -62,7 +63,7 @@ async def movie_suggest(ctx, *, movie:str):
     options = []
     view = View()
     for result in top_results:
-        movie_title_and_year = f"{result['title']} ({result['release_date'][:4]})"
+        movie_title_and_year = f"{result['title']} ({result['release_date'][:4]})"[:100]
         movie_tmdb_id = result['id']
         movie_desc = f"{result['overview'][:97]}..."
 
@@ -101,7 +102,7 @@ async def movie_suggest(ctx, *, movie:str):
             if ctx.author.id == movie["suggested_by"]:
                 user_active_suggested_movie_count += 1
         
-        if user_active_suggested_movie_count >= 3:
+        if user_active_suggested_movie_count >= max_suggestions:
             await interaction.response.edit_message(view=view)
             await interaction.followup.send(f"Sorry you have already reached you maximum suggestion count. You will be able to suggest again when you have less than 3 active suggestions.", ephemeral=True)
             return
@@ -176,7 +177,7 @@ async def movie_suggest_id(ctx, *, id:int):
         if ctx.author.id == movie["suggested_by"]:
             user_active_suggested_movie_count += 1
         
-    if user_active_suggested_movie_count >= 3:
+    if user_active_suggested_movie_count >= max_suggestions:
         await ctx.respond(f"Sorry you have already reached you maximum suggestion count. You will be able to suggest again when you have less than 3 active suggestions.", ephemeral=True)
         return
     
